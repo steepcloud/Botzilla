@@ -1,6 +1,7 @@
 import asyncio
 import random as rd
 import discord
+import os
 from discord.ext import commands
 from src.utils.api_client import ApiClient
 
@@ -10,7 +11,7 @@ class Trivia(commands.Cog):
         self.bot = bot
         self.api_client = ApiClient()
         self.trivia_sessions = {}
-        self.daily_riddles = [
+        self.fallback_riddles = [
             {"question": "What has keys but no locks, space but no room, and you can enter but not go in?",
              "answer": "keyboard"},
             {"question": "What gets wet while drying?", "answer": "towel"},
@@ -82,18 +83,41 @@ class Trivia(commands.Cog):
 
     @commands.command(name="riddle")
     async def riddle(self, ctx):
-        riddle = rd.choice(self.daily_riddles)
+        try:
+            data = await self.api_client.get("https://api.api-ninjas.com/v1/riddles",
+                                           headers={"X-Api-Key": os.getenv("API_NINJAS_KEY")})
 
-        embed = discord.Embed(
-            title="Brain Teaser",
-            description=riddle["question"],
-            color=discord.Color.purple()
-        )
-        embed.set_footer(text="Type !answer to see the solution")
+            if data and isinstance(data, list) and len(data) > 0:
+                riddle = data[0]
+                question = riddle.get("question", "")
+                answer = riddle.get("answer", "")
+            else:
+                riddle = rd.choice(self.fallback_riddles)
+                question = riddle["question"]
+                answer = riddle["answer"]
 
-        await ctx.send(embed=embed)
+            embed = discord.Embed(
+                title="Brain Teaser",
+                description=question,
+                color=discord.Color.purple()
+            )
+            embed.set_footer(text="Type !answer to see the solution")
 
-        ctx.bot._last_riddle_answer = riddle["answer"]
+            await ctx.send(embed=embed)
+            ctx.bot._last_riddle_answer = answer
+
+        except Exception as e:
+            riddle = rd.choice(self.fallback_riddles)
+
+            embed = discord.Embed(
+                title="Brain Teaser",
+                description=riddle["question"],
+                color=discord.Color.purple()
+            )
+            embed.set_footer(text="Type !answer to see the solution")
+
+            await ctx.send(embed=embed)
+            ctx.bot._last_riddle_answer = riddle["answer"]
 
     @commands.command(name="answer")
     async def answer(self, ctx):

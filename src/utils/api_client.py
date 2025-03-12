@@ -12,13 +12,13 @@ class ApiClient:
         if self.session:
             await self.session.close()
 
-    async def get(self, url, params=None):
+    async def get(self, url, params=None, headers=None):
         try:
-            async with self.session.get(url, params=params) as response:
+            async with self.session.get(url, params=params, headers=headers) as response:
                 if response.status == 200:
                     return await response.json()
                 else:
-                    logger.error(f"API request failed: {response.status}")
+                    logger.error(f"API request failed: {response.status} - {await response.text()}")
                     return None
         except Exception as e:
             logger.error(f"API request error: {e}")

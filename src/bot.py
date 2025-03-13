@@ -26,7 +26,8 @@ class Bot(commands.Bot):
             command_prefix='!',
             intents=intents,
             help_command=commands.DefaultHelpCommand(),
-            description="A fun Discord bot with various features"
+            description="A fun Discord bot with various features",
+            application_id=os.getenv('APPLICATION_ID')
         )
 
     async def setup_hook(self):
@@ -46,6 +47,13 @@ class Bot(commands.Bot):
     async def on_ready(self):
         logger.info(f'{self.user.name} has connected to Discord!')
         logger.info(f'Bot is in {len(self.guilds)} guilds')
+
+        try:
+            synced = await self.tree.sync()
+            logger.info(f"Synced {len(synced)} command(s)")
+        except Exception as e:
+            logger.error(f"Failed to sync commands: {e}")
+
         await self.change_presence(activity=discord.Game(name="!help for commands"))
 
 
